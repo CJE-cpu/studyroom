@@ -1,0 +1,215 @@
+.home {
+  background: #fbfaf6;
+}
+.hero {
+  position: relative;
+  min-height: 590px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.heroImage,
+.shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.heroImage {
+  object-fit: cover;
+  object-position: center 58%;
+}
+.shade {
+  background: linear-gradient(90deg, #faf6ecf2 0%, #faf6ecd9 30%, #faf6ec40 63%, transparent 85%);
+}
+.copy {
+  position: relative;
+  padding-block: 70px;
+  max-width: 610px;
+}
+.copy h1 {
+  font-size: clamp(40px, 4.8vw, 66px);
+  line-height: 1.22;
+  letter-spacing: -0.06em;
+}
+.description {
+  margin: 26px 0 32px;
+  font-size: 17px;
+  line-height: 1.9;
+  color: #52616a;
+}
+.links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.links > a:last-child {
+  font-size: 14px;
+  text-underline-offset: 6px;
+}
+.caption {
+  position: absolute;
+  right: 24px;
+  bottom: 18px;
+  background: #fffaf0dd;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+}
+.quickBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-block: 26px;
+  border-bottom: 1px solid #e0ddd3;
+  font-size: 13px;
+}
+.quickBar > span,
+.quickBar > div,
+.quickBar > a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.quickBar a {
+  text-decoration: none;
+  font-weight: 700;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #75886a;
+}
+.section {
+  padding-block: 76px;
+}
+.subtext {
+  color: #65717a;
+  margin-top: 12px;
+  font-size: 15px;
+}
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  text-decoration: none;
+  padding-block: 10px;
+}
+.guide {
+  padding-block: 64px;
+  background: #eeeee5;
+  scroll-margin-top: 24px;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 40px;
+}
+.steps article {
+  padding-top: 22px;
+  border-top: 1px solid #c9cdbf;
+}
+.stepTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #62715b;
+  margin-bottom: 24px;
+}
+.stepTop span {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+.steps h3 {
+  font-size: 19px;
+  margin-bottom: 10px;
+}
+.steps p {
+  font-size: 14px;
+  color: #65717a;
+}
+.invitation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  padding: 40px;
+  border: 1px solid #e0ddd3;
+  border-radius: 16px;
+  background: #fff;
+}
+.invitation > div > p:last-child {
+  margin-top: 14px;
+  color: #65717a;
+}
+.invitation > a {
+  flex-shrink: 0;
+}
+.demo {
+  text-align: center;
+  font-size: 12px;
+  color: #65717a;
+  margin-top: 20px;
+}
+@media (max-width: 800px) {
+  .hero {
+    min-height: 520px;
+  }
+  .shade {
+    background: linear-gradient(90deg, #faf6ecf2, #faf6ecb8 60%, #faf6ec50);
+  }
+  .quickBar {
+    justify-content: flex-start;
+    gap: 18px 28px;
+  }
+  .steps {
+    gap: 20px;
+  }
+  .invitation {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 28px;
+  }
+}
+@media (max-width: 560px) {
+  .hero {
+    min-height: 510px;
+  }
+  .copy {
+    padding-block: 44px 66px;
+  }
+  .copy h1 {
+    font-size: 43px;
+  }
+  .copy :global(.eyebrow) {
+    font-size: 9px;
+  }
+  .description {
+    font-size: 15px;
+  }
+  .links {
+    gap: 18px;
+  }
+  .section {
+    padding-block: 44px;
+  }
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .guide {
+    padding-block: 44px;
+  }
+  .stepTop {
+    margin-bottom: 16px;
+  }
+  .quickBar > div {
+    width: 100%;
+  }
+}
