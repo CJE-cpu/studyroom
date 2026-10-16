@@ -19,12 +19,12 @@ export const rooms: Room[] = [
     amenities: ['데스크 램프', 'Wi-Fi', '공용 테이블'],
   },
   {
-    id : 'quiet',
+    id: 'quiet',
     name: '조용한 공간',
     capacity: 2,
-    image: '/images/room-two-person.png',
+    image: '/images/room-placeholder.svg',
     description:
       '집중이 필요한 개인 작업에 최적화된 공간. 조용한 환경에서 업무와 학습에 몰입하세요.',
     amenities: ['개인 책상', 'Wi-Fi', '콘센트'],
-  }
+  },
 ]

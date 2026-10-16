@@ -589,3 +589,83 @@ legend {
     transition: none !important;
   }
 }
+
+/* Input and feedback states shared by booking and member forms. */
+input,
+select {
+  min-width: 0;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+input::placeholder {
+  color: #78838c;
+  opacity: 1;
+}
+input:focus,
+select:focus {
+  border-color: #294763;
+  box-shadow: 0 0 0 3px #29476312;
+}
+input:user-invalid {
+  border-color: #a12c34;
+}
+.auth-form [role='status'],
+.booking > [role='status'] {
+  padding: 12px 14px;
+  border: 1px solid #dedbcf;
+  border-radius: 8px;
+  background: #f8f6ef;
+  color: #52616a;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.auth-form a {
+  text-underline-offset: 4px;
+}
+.auth-form .eyebrow {
+  margin-bottom: 0;
+}
+.error {
+  padding: 12px 14px;
+  border: 1px solid #edd0ce;
+  border-radius: 8px;
+  background: #fff4f2;
+}
+.reservation > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.reservation .status {
+  display: inline-flex;
+  align-items: center;
+}
+.completion > svg {
+  color: #627b59;
+}
+.room-card:focus-visible {
+  outline: 3px solid #b28d46;
+  outline-offset: 4px;
+}
+@media (max-width: 560px) {
+  .auth-form {
+    width: 100%;
+  }
+  .auth-form h1,
+  .completion h1 {
+    font-size: 26px;
+  }
+  .reservation > .button {
+    width: 100%;
+  }
+  input,
+  select {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  input,
+  select {
+    transition: none;
+  }
+}

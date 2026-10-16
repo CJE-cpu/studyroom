@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { rooms } from '../features/rooms/mockData'
 import {
   dateValue,
+  isBookableDate,
   isPast,
   readReservations,
   saveReservations,
@@ -25,11 +26,13 @@ export default function RoomDetailPage() {
     )
   const reservations = readReservations()
   const unavailable = (h: number) =>
+    !isBookableDate(date) ||
     isPast(date, h) ||
     reservations.some(
       (r) => r.roomId === id && r.date === date && r.hour === h && r.status === 'CONFIRMED',
     )
   const submit = () => {
+    if (busy) return
     setError('')
     if (
       !date ||
@@ -138,13 +141,30 @@ export default function RoomDetailPage() {
               ))}
             </div>
           </fieldset>
-          <p className="muted">회색 시간대는 이용할 수 없습니다.</p>
+          <p className="muted">한국 시간 기준 · 회색 시간대는 이용할 수 없습니다.</p>
+          {hour !== null && !unavailable(hour) && (
+            <div className="demo-note" role="status">
+              {room.name} · {date}
+              <br />
+              {hour}:00–{hour + 1}:00 · {people}명
+            </div>
+          )}
+          {isBookableDate(date) &&
+            Array.from({ length: 13 }, (_, i) => i + 9).every(unavailable) && (
+              <p role="status">
+                이 날짜에는 예약 가능한 시간이 없습니다. 다른 날짜를 선택해 주세요.
+              </p>
+            )}
           {error && (
             <p role="alert" className="error">
               {error}
             </p>
           )}
-          <button className="button full" disabled={busy || hour === null} onClick={submit}>
+          <button
+            className="button full"
+            disabled={busy || hour === null || unavailable(hour)}
+            onClick={submit}
+          >
             데모 예약하기
           </button>
         </aside>

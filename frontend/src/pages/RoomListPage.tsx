@@ -58,9 +58,9 @@ export default function RoomListPage() {
           <label className="filter">
             이용 인원
             <select value={people} onChange={(e) => setPeople(Number(e.target.value))}>
-              {[1, 2, 3, 4, 5].map((n) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
                 <option key={n} value={n}>
-                  {n}명{n === 5 ? ' 이상' : ''}
+                  {n}명
                 </option>
               ))}
             </select>

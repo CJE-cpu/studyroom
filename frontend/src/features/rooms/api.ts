@@ -1,5 +1,9 @@
-import { rooms } from './mockData'
-// Replace this adapter with the Spring Boot API when the server is ready.
-export async function getRooms() {
-  return rooms
+import axios from 'axios'
+import type { Room } from './types'
+
+export async function getRooms(): Promise<Room[]> {
+  const response = await axios.get<Room[]>('/api/rooms', {
+    timeout: 10000,
+  })
+  return response.data
 }
