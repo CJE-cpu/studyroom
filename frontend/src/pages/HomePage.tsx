@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, CalendarDays, Clock3, Users, CheckCircle2 } from 'lucide-react'
-import { rooms } from '../features/rooms/mockData'
+import { useRooms } from '../features/rooms/useRooms'
 import styles from './HomePage.module.scss'
 
 const steps = [
@@ -25,6 +25,7 @@ const steps = [
 ]
 
 export default function HomePage() {
+  const { data: rooms = [], isPending, isError, refetch } = useRooms()
   return (
     <div className={styles.home}>
       <section className={styles.hero}>
@@ -86,6 +87,21 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="room-grid">
+          {isPending && <p role="status">공간을 불러오는 중입니다.</p>}
+          {isError && (
+            <div role="alert">
+              <p>공간을 불러오지 못했습니다.</p>
+              <button
+                className="button secondary"
+                onClick={() => {
+                  void refetch()
+                }}
+              >
+                다시 시도
+              </button>
+            </div>
+          )}
+          {!isPending && !isError && rooms.length === 0 && <p>등록된 공간이 없습니다.</p>}
           {rooms.slice(0, 2).map((room) => (
             <Link className="room-card" key={room.id} to={'/rooms/' + room.id}>
               <div className="room-photo">

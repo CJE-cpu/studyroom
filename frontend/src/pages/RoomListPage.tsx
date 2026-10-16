@@ -1,16 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { ArrowUpRight, Users, Clock, Check } from 'lucide-react'
-import { getRooms } from '../features/rooms/api'
+import { useRooms } from '../features/rooms/useRooms'
 export default function RoomListPage() {
   const [people, setPeople] = useState(1)
-  const {
-    data: rooms = [],
-    isPending,
-    isError,
-    refetch,
-  } = useQuery({ queryKey: ['rooms'], queryFn: getRooms })
+  const { data: rooms = [], isPending, isError, refetch } = useRooms()
+  const maxCapacity = Math.max(1, people, ...rooms.map((room) => room.capacity))
   const filtered = rooms.filter((room) => room.capacity >= people)
   return (
     <>
@@ -58,7 +53,7 @@ export default function RoomListPage() {
           <label className="filter">
             이용 인원
             <select value={people} onChange={(e) => setPeople(Number(e.target.value))}>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              {Array.from({ length: maxCapacity }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
                   {n}명
                 </option>
@@ -71,8 +66,12 @@ export default function RoomListPage() {
         ) : isError ? (
           <div role="alert">
             공간을 불러오지 못했습니다.
-            <button onClick={() => void refetch()}>다시 시도</button>
+            <button className="button secondary" onClick={() => void refetch()}>
+              다시 시도
+            </button>
           </div>
+        ) : rooms.length === 0 ? (
+          <div className="empty">등록된 공간이 없습니다.</div>
         ) : filtered.length === 0 ? (
           <div className="empty">조건에 맞는 공간이 없습니다. 이용 인원을 변경해 보세요.</div>
         ) : (

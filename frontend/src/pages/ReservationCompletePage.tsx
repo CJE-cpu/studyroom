@@ -1,19 +1,26 @@
 import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
-import { readReservations } from '../features/reservations/store'
-import { rooms } from '../features/rooms/mockData'
+import { useReservations } from '../features/reservations/useReservations'
+import { useRooms } from '../features/rooms/useRooms'
 export default function ReservationCompletePage() {
+  const { data: rooms = [] } = useRooms()
   const { id } = useParams()
-  const item = readReservations().find((r) => r.id === id)
+  const item = useReservations().find((r) => r.id === id)
   return (
     <section className="container page">
       <div className="panel completion">
-        <CheckCircle2 size={48} />
+        {item?.status === 'CONFIRMED' && <CheckCircle2 size={48} />}
         <p className="eyebrow">YOUR NEXT CHAPTER</p>
-        <h1>{item ? '집중할 시간이 준비됐어요.' : '예약을 찾을 수 없어요.'}</h1>
+        <h1>
+          {!item
+            ? '예약을 찾을 수 없어요.'
+            : item.status === 'CANCELLED'
+              ? '취소된 예약입니다.'
+              : '집중할 시간이 준비됐어요.'}
+        </h1>
         {item && (
           <>
-            <p>{rooms.find((r) => r.id === item.roomId)?.name}</p>
+            <p>{rooms.find((r) => r.id === item.roomId)?.name || '공간 ' + item.roomId}</p>
             <p>
               {item.date} · {item.hour}:00–{item.hour + 1}:00 · {item.people}명
             </p>

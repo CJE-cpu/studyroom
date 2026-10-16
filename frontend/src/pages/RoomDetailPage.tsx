@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useReservations } from '../features/reservations/useReservations'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { rooms } from '../features/rooms/mockData'
+import { useRooms } from '../features/rooms/useRooms'
 import {
   dateValue,
   isBookableDate,
@@ -9,6 +10,7 @@ import {
   saveReservations,
 } from '../features/reservations/store'
 export default function RoomDetailPage() {
+  const { data: rooms = [], isPending, isError, refetch } = useRooms()
   const { id } = useParams()
   const room = rooms.find((r) => r.id === id)
   const navigate = useNavigate()
@@ -17,6 +19,27 @@ export default function RoomDetailPage() {
   const [people, setPeople] = useState(1)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const reservations = useReservations()
+  if (isPending)
+    return (
+      <section className="container page" role="status">
+        공간 정보를 불러오는 중입니다.
+      </section>
+    )
+  if (isError)
+    return (
+      <section className="container page" role="alert">
+        <p>공간 정보를 불러오지 못했습니다.</p>
+        <button
+          className="button"
+          onClick={() => {
+            void refetch()
+          }}
+        >
+          다시 시도
+        </button>
+      </section>
+    )
   if (!room)
     return (
       <section className="container page empty">
@@ -24,7 +47,7 @@ export default function RoomDetailPage() {
         <Link to="/rooms">목록으로 돌아가기</Link>
       </section>
     )
-  const reservations = readReservations()
+
   const unavailable = (h: number) =>
     !isBookableDate(date) ||
     isPast(date, h) ||
@@ -40,6 +63,7 @@ export default function RoomDetailPage() {
       date > dateValue(30) ||
       hour === null ||
       unavailable(hour) ||
+      !Number.isInteger(people) ||
       people < 1 ||
       people > room.capacity
     ) {
@@ -100,7 +124,8 @@ export default function RoomDetailPage() {
           <p className="eyebrow">MAKE TIME FOR YOURSELF</p>
           <h2>시간 선택하기</h2>
           <p className="demo-note">
-            체험용 예약입니다. 실제 공간 예약이나 결제는 발생하지 않습니다.
+            이 브라우저에서 공유되는 체험용 예약이며 로그인 계정과 연결되지 않습니다. 실제 예약이나
+            결제는 발생하지 않습니다.
           </p>
           <label>
             이용 날짜
@@ -142,6 +167,11 @@ export default function RoomDetailPage() {
             </div>
           </fieldset>
           <p className="muted">한국 시간 기준 · 회색 시간대는 이용할 수 없습니다.</p>
+          {hour !== null && unavailable(hour) && (
+            <p role="status">
+              선택한 시간이 마감되었거나 예약할 수 없는 상태입니다. 다른 시간을 선택해 주세요.
+            </p>
+          )}
           {hour !== null && !unavailable(hour) && (
             <div className="demo-note" role="status">
               {room.name} · {date}

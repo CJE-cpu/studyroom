@@ -45,6 +45,7 @@ export function readReservations(): Reservation[] {
 }
 export function saveReservations(items: Reservation[]) {
   localStorage.setItem(KEY, JSON.stringify(z.array(itemSchema).parse(items)))
+  window.dispatchEvent(new Event('studyroom-reservations-change'))
 }
 export function dateValue(offset = 0) {
   const today = koreanDate(new Date())
