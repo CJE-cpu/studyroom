@@ -61,19 +61,33 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrity(
         DataIntegrityViolationException exception
     ) {
-        String message = "저장할 정보가 기존 데이터 또는 저장 규칙과 충돌합니다.";
+        String message =
+            "저장할 정보가 기존 데이터 또는 저장 규칙과 충돌합니다.";
 
         Throwable cause = exception;
+
         while (cause != null) {
-            if (cause instanceof org.hibernate.exception.ConstraintViolationException violation) {
+            if (cause instanceof
+                org.hibernate.exception.ConstraintViolationException violation) {
+
                 String constraint = violation.getConstraintName();
 
-                if (constraint != null
-                    && (constraint.equalsIgnoreCase("uk_members_email")
-                        || constraint.toLowerCase(java.util.Locale.ROOT)
-                            .endsWith(".uk_members_email"))) {
-                    message = "이미 사용 중인 이메일입니다.";
-                    break;
+                if (constraint != null) {
+                    String normalized =
+                        constraint.toLowerCase(java.util.Locale.ROOT);
+
+                    if (normalized.equals("uk_members_email")
+                        || normalized.endsWith(".uk_members_email")) {
+                        message = "이미 사용 중인 이메일입니다.";
+                        break;
+                    }
+
+                    if (normalized.equals("uk_reservations_active_slot")
+                        || normalized.endsWith(".uk_reservations_active_slot")) {
+                        message =
+                            "이미 예약된 시간입니다. 다른 시간을 선택해주세요.";
+                        break;
+                    }
                 }
             }
 

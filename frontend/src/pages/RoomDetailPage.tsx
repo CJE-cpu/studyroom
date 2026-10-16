@@ -1,14 +1,15 @@
-import { useState } from 'react'
-import { useReservations } from '../features/reservations/useReservations'
+import { useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { currentMember } from '../features/auth/api'
+import {
+  createReservation,
+  getAvailableHours,
+  isUnauthorized,
+  reservationError,
+} from '../features/reservations/api'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useRooms } from '../features/rooms/useRooms'
-import {
-  dateValue,
-  isBookableDate,
-  isPast,
-  readReservations,
-  saveReservations,
-} from '../features/reservations/store'
+import { dateValue, isBookableDate, isPast } from '../features/reservations/store'
 export default function RoomDetailPage() {
   const { data: rooms = [], isPending, isError, refetch } = useRooms()
   const { id } = useParams()
@@ -19,7 +20,16 @@ export default function RoomDetailPage() {
   const [people, setPeople] = useState(1)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const reservations = useReservations()
+  const client = useQueryClient()
+  const submitting = useRef(false)
+  const auth = useQuery({ queryKey: ['auth', 'me'], queryFn: currentMember, retry: false })
+  const availability = useQuery({
+    queryKey: ['availability', id, date],
+    queryFn: ({ signal }) => getAvailableHours(id!, date, signal),
+    enabled: !!room && isBookableDate(date),
+    retry: false,
+    refetchInterval: 30000,
+  })
   if (isPending)
     return (
       <section className="container page" role="status">
@@ -51,46 +61,46 @@ export default function RoomDetailPage() {
   const unavailable = (h: number) =>
     !isBookableDate(date) ||
     isPast(date, h) ||
-    reservations.some(
-      (r) => r.roomId === id && r.date === date && r.hour === h && r.status === 'CONFIRMED',
-    )
-  const submit = () => {
-    if (busy) return
+    availability.isPending ||
+    availability.isError ||
+    !availability.data?.includes(h)
+  const submit = async () => {
+    if (submitting.current) return
     setError('')
+    if (!auth.data) {
+      navigate('/login')
+      return
+    }
     if (
-      !date ||
-      date < dateValue() ||
-      date > dateValue(30) ||
       hour === null ||
       unavailable(hour) ||
       !Number.isInteger(people) ||
       people < 1 ||
       people > room.capacity
-    ) {
-      setError('예약 가능한 날짜·시간과 인원을 선택해 주세요.')
+    )
       return
-    }
+    submitting.current = true
     setBusy(true)
     try {
-      const latest = readReservations()
-      if (
-        latest.some(
-          (r) => r.roomId === id && r.date === date && r.hour === hour && r.status === 'CONFIRMED',
-        )
-      )
-        throw new Error('이미 선택된 시간입니다.')
-      const reservation = {
-        id: crypto.randomUUID(),
+      const reservation = await createReservation({
         roomId: room.id,
-        date,
-        hour,
+        reservationDate: date,
+        startHour: hour,
         people,
-        status: 'CONFIRMED' as const,
-      }
-      saveReservations([...latest, reservation])
+      })
+      void client.invalidateQueries({ queryKey: ['reservations'] })
+      void client.invalidateQueries({ queryKey: ['availability'] })
       navigate('/reservations/' + reservation.id + '/complete')
-    } catch {
-      setError('예약을 저장하지 못했습니다. 저장 권한과 시간 선택을 확인해 주세요.')
+    } catch (error) {
+      setError(reservationError(error))
+      if (isUnauthorized(error)) {
+        client.setQueryData(['auth', 'me'], null)
+        void client.cancelQueries({ queryKey: ['reservations'] })
+        client.removeQueries({ queryKey: ['reservations'] })
+      }
+      void availability.refetch()
+    } finally {
+      submitting.current = false
       setBusy(false)
     }
   }
@@ -124,13 +134,14 @@ export default function RoomDetailPage() {
           <p className="eyebrow">MAKE TIME FOR YOURSELF</p>
           <h2>시간 선택하기</h2>
           <p className="demo-note">
-            이 브라우저에서 공유되는 체험용 예약이며 로그인 계정과 연결되지 않습니다. 실제 예약이나
-            결제는 발생하지 않습니다.
+            로그인한 계정으로 예약이 저장됩니다. 포트폴리오 시연용이며 실제 공간 이용이나 결제는
+            제공하지 않습니다.
           </p>
           <label>
             이용 날짜
             <input
               type="date"
+              disabled={busy}
               min={dateValue()}
               max={dateValue(30)}
               value={date}
@@ -142,7 +153,11 @@ export default function RoomDetailPage() {
           </label>
           <label>
             이용 인원
-            <select value={people} onChange={(e) => setPeople(Number(e.target.value))}>
+            <select
+              disabled={busy}
+              value={people}
+              onChange={(e) => setPeople(Number(e.target.value))}
+            >
               {Array.from({ length: room.capacity }, (_, i) => (
                 <option key={i} value={i + 1}>
                   {i + 1}명
@@ -150,14 +165,41 @@ export default function RoomDetailPage() {
               ))}
             </select>
           </label>
-          <fieldset>
+          <fieldset disabled={busy}>
+            {availability.isPending && isBookableDate(date) && (
+              <p role="status">예약 가능한 시간을 확인하고 있습니다.</p>
+            )}
+            {availability.isError && (
+              <div role="alert">
+                <p>예약 가능 시간을 불러오지 못했습니다.</p>
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => void availability.refetch()}
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+            {auth.isError && (
+              <div role="alert">
+                <p>로그인 상태를 확인할 수 없습니다.</p>
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => void auth.refetch()}
+                >
+                  로그인 상태 다시 확인
+                </button>
+              </div>
+            )}
             <legend>시작 시간 · 1시간 이용</legend>
             <div className="time-grid">
               {Array.from({ length: 13 }, (_, i) => i + 9).map((h) => (
                 <button
                   type="button"
                   key={h}
-                  disabled={!date || unavailable(h)}
+                  disabled={busy || !date || unavailable(h)}
                   aria-pressed={hour === h}
                   onClick={() => setHour(h)}
                 >
@@ -179,7 +221,8 @@ export default function RoomDetailPage() {
               {hour}:00–{hour + 1}:00 · {people}명
             </div>
           )}
-          {isBookableDate(date) &&
+          {availability.isSuccess &&
+            isBookableDate(date) &&
             Array.from({ length: 13 }, (_, i) => i + 9).every(unavailable) && (
               <p role="status">
                 이 날짜에는 예약 가능한 시간이 없습니다. 다른 날짜를 선택해 주세요.
@@ -192,10 +235,15 @@ export default function RoomDetailPage() {
           )}
           <button
             className="button full"
-            disabled={busy || hour === null || unavailable(hour)}
+            disabled={
+              busy ||
+              auth.isPending ||
+              auth.isError ||
+              (!!auth.data && (hour === null || unavailable(hour)))
+            }
             onClick={submit}
           >
-            데모 예약하기
+            {busy ? '예약 중…' : auth.data ? '예약하기' : '로그인하고 예약하기'}
           </button>
         </aside>
       </div>

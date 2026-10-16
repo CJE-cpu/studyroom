@@ -1,73 +1,84 @@
-import { useState } from 'react'
-import { useReservations } from '../features/reservations/useReservations'
+import { useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { useRooms } from '../features/rooms/useRooms'
-import { isPast, readReservations, saveReservations } from '../features/reservations/store'
+import { useReservations, reservationsReady } from '../features/reservations/useReservations'
+import { ReservationAccess } from '../features/reservations/ReservationAccess'
+import { cancelReservation, isUnauthorized, reservationError } from '../features/reservations/api'
+import { isPast } from '../features/reservations/store'
+
 export default function MyReservationsPage() {
-  const { data: rooms = [] } = useRooms()
-  const items = useReservations()
+  const state = useReservations()
+  const client = useQueryClient()
   const [error, setError] = useState('')
-  const cancel = (id: string) => {
-    if (!window.confirm('예약을 취소할까요?')) return
-    const latest = readReservations()
-    const item = latest.find((r) => r.id === id)
-    if (!item || item.status !== 'CONFIRMED' || isPast(item.date, item.hour)) {
-      setError('예약이 없거나 이미 취소·시작된 상태입니다.')
-      return
-    }
-    const next = latest.map((r) => (r.id === id ? { ...r, status: 'CANCELLED' as const } : r))
+  const [busyId, setBusyId] = useState<number | null>(null)
+  const submitting = useRef(false)
+  const cancel = async (id: number) => {
+    if (submitting.current || !window.confirm('예약을 취소할까요?')) return
+    submitting.current = true
+    setBusyId(id)
+    setError('')
     try {
-      saveReservations(next)
-      setError('')
-    } catch {
-      setError('변경 사항을 저장하지 못했습니다.')
+      await cancelReservation(id)
+    } catch (error) {
+      setError(reservationError(error))
+      if (isUnauthorized(error)) void client.invalidateQueries({ queryKey: ['auth', 'me'] })
+    } finally {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['reservations'] }),
+        client.invalidateQueries({ queryKey: ['availability'] }),
+      ])
+      submitting.current = false
+      setBusyId(null)
     }
   }
   return (
     <section className="container page">
       <p className="eyebrow">MY RESERVATIONS</p>
       <h1>나의 집중 시간</h1>
-      <p className="lead">
-        이 브라우저의 공용 데모 예약입니다. 로그인 계정별 예약은 아직 지원하지 않습니다.
-      </p>
+      <p className="lead">로그인한 계정의 예약을 확인하고 관리하세요.</p>
       {error && (
-        <p role="alert" className="error">
+        <p className="error" role="alert">
           {error}
         </p>
       )}
-      {!items.length ? (
+      {!reservationsReady(state) ? (
+        <ReservationAccess state={state} />
+      ) : !state.query.data?.length ? (
         <div className="empty">
           <h2>아직 예약한 공간이 없어요.</h2>
-          <p>나에게 맞는 공간부터 찾아볼까요?</p>
           <Link className="button" to="/rooms">
             공간 둘러보기
           </Link>
         </div>
       ) : (
         <div className="reservation-list">
-          {[...items].reverse().map((r) => (
+          {state.query.data.map((r) => (
             <article className="panel reservation" key={r.id}>
               <div>
                 <span className="status">
                   {r.status === 'CANCELLED'
                     ? '취소됨'
-                    : isPast(r.date, r.hour + 1)
+                    : isPast(r.reservationDate, r.endHour)
                       ? '이용 종료'
-                      : isPast(r.date, r.hour)
+                      : isPast(r.reservationDate, r.startHour)
                         ? '이용 중'
                         : '예약 완료'}
                 </span>
-                <h2>{rooms.find((room) => room.id === r.roomId)?.name || '공간 ' + r.roomId}</h2>
+                <h2>{r.roomName}</h2>
                 <p>
-                  {r.date} · {r.hour}:00–{r.hour + 1}:00 · {r.people}명
+                  {r.reservationDate} · {r.startHour}:00–{r.endHour}:00 · {r.people}명
                 </p>
               </div>
               <button
                 className="button secondary"
-                disabled={r.status === 'CANCELLED' || isPast(r.date, r.hour)}
-                onClick={() => cancel(r.id)}
+                disabled={
+                  busyId !== null ||
+                  r.status === 'CANCELLED' ||
+                  isPast(r.reservationDate, r.startHour)
+                }
+                onClick={() => void cancel(r.id)}
               >
-                예약 취소
+                {busyId === r.id ? '취소 중…' : '예약 취소'}
               </button>
             </article>
           ))}

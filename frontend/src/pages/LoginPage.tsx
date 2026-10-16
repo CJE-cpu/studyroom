@@ -25,6 +25,8 @@ export default function LoginPage() {
     try {
       const member = await login({ email: email.trim(), password })
       await client.cancelQueries({ queryKey: ['auth', 'me'] })
+      await client.cancelQueries({ queryKey: ['reservations'] })
+      client.removeQueries({ queryKey: ['reservations'] })
       client.setQueryData(['auth', 'me'], member)
       navigate('/', { replace: true })
     } catch (error) {
@@ -36,19 +38,19 @@ export default function LoginPage() {
   }
   return (
     <section className="container page">
-      <form
-        className="panel auth-form"
-        onSubmit={handleSubmit} aria-busy={pending}
-      >
+      <form className="panel auth-form" onSubmit={handleSubmit} aria-busy={pending}>
         <p className="eyebrow">WELCOME BACK</p>
         <h1>다시 만나 반가워요.</h1>
-        {location.state?.signupComplete === true && <p role="status">회원가입이 완료됐습니다. 가입한 계정으로 로그인해주세요.</p>}
+        {location.state?.signupComplete === true && (
+          <p role="status">회원가입이 완료됐습니다. 가입한 계정으로 로그인해주세요.</p>
+        )}
         <p className="muted">가입한 이메일과 비밀번호로 로그인하세요.</p>
         <label>
           이메일
           <input
             type="email"
-            autoComplete="email" maxLength={254}
+            autoComplete="email"
+            maxLength={254}
             required
             placeholder="you@example.com"
             value={email}
@@ -61,12 +63,15 @@ export default function LoginPage() {
             type="password"
             autoComplete="current-password"
             required
-            minLength={8} maxLength={64}
+            minLength={8}
+            maxLength={64}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
-        <button className="button full" type="submit" disabled={pending}>{pending ? '로그인 중…' : '로그인'}</button>
+        <button className="button full" type="submit" disabled={pending}>
+          {pending ? '로그인 중…' : '로그인'}
+        </button>
         {message && <p role="status">{message}</p>}
         <p>
           처음 방문하셨나요? <Link to="/signup">회원가입</Link>

@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react'
-import { readReservations } from './store'
+import { useQuery } from '@tanstack/react-query'
+import { currentMember } from '../auth/api'
+import { getReservations } from './api'
 
 export function useReservations() {
-  const [items, setItems] = useState(readReservations)
-  useEffect(() => {
-    const refresh = () => setItems(readReservations())
-    window.addEventListener('storage', refresh)
-    window.addEventListener('studyroom-reservations-change', refresh)
-    window.addEventListener('focus', refresh)
-    const timer = window.setInterval(refresh, 30000)
-    return () => {
-      window.removeEventListener('storage', refresh)
-      window.removeEventListener('studyroom-reservations-change', refresh)
-      window.removeEventListener('focus', refresh)
-      window.clearInterval(timer)
-    }
-  }, [])
-  return items
+  const auth = useQuery({ queryKey: ['auth', 'me'], queryFn: currentMember, retry: false })
+  const query = useQuery({
+    queryKey: ['reservations', auth.data?.id],
+    queryFn: ({ signal }) => getReservations(signal),
+    enabled: !!auth.data && !auth.isError,
+    retry: false,
+    refetchInterval: 30000,
+  })
+  return { auth, query }
+}
+
+export function reservationsReady(state: ReturnType<typeof useReservations>) {
+  return !!state.auth.data && !state.auth.isError && state.query.isSuccess
 }

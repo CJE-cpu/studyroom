@@ -1,4 +1,3 @@
-import { z } from 'zod'
 export function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const date = new Date(value + 'T00:00:00+09:00')
@@ -12,40 +11,6 @@ function koreanDate(date: Date) {
     day: '2-digit',
   }).formatToParts(date)
   return ['year', 'month', 'day'].map((type) => parts.find((p) => p.type === type)!.value).join('-')
-}
-const itemSchema = z.object({
-  id: z.string().min(1),
-  roomId: z.string().min(1),
-  date: z.string().refine(validDate),
-  hour: z.number().int().min(9).max(21),
-  people: z.number().int().positive().max(100),
-  status: z.enum(['CONFIRMED', 'CANCELLED']),
-})
-export type Reservation = z.infer<typeof itemSchema>
-const KEY = 'studyroom-demo-reservations-v1'
-export function readReservations(): Reservation[] {
-  let raw: string | null
-  try {
-    raw = localStorage.getItem(KEY)
-  } catch {
-    return []
-  }
-  if (!raw) return []
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return []
-  }
-  if (!Array.isArray(parsed)) return []
-  return parsed.flatMap((item) => {
-    const result = itemSchema.safeParse(item)
-    return result.success ? [result.data] : []
-  })
-}
-export function saveReservations(items: Reservation[]) {
-  localStorage.setItem(KEY, JSON.stringify(z.array(itemSchema).parse(items)))
-  window.dispatchEvent(new Event('studyroom-reservations-change'))
 }
 export function dateValue(offset = 0) {
   const today = koreanDate(new Date())
