@@ -1,30 +1,33 @@
 # STUDYROOM
 
-React + TypeScript 기반 스터디룸 예약 서비스 포트폴리오입니다.
+React·TypeScript와 Spring Boot·MySQL로 만든 스터디룸 예약 포트폴리오입니다.
 
 ## 구성
-- frontend: Vite 프론트엔드
-- backend: Spring Boot 백엔드 개발 예정
-- docs: 이미지 생성 기록 및 프로젝트 문서
+- frontend: Vite + React
+- backend: Java 21 + Spring Boot + JPA
+- docs/database: 테이블 생성 및 공간 초기 데이터 SQL
+- docs/DEPLOYMENT.md: Render + Aiven 배포 안내
 
-## 실행
-```sh
-cd frontend
-npm install
-npm run dev
-```
+## 구현 기능
+공간 탐색, 회원가입, 세션 로그인·로그아웃, 시간별 예약 생성·조회·취소를 제공합니다.
+서버에서 인원·시간·예약 소유자를 확인하고 DB 제약조건으로 중복 예약을 차단합니다.
+예약과 회원 정보는 MySQL에 저장됩니다. 결제 기능은 포함하지 않습니다.
+공간 이미지는 AI로 생성한 가상 공간입니다.
 
-## 구현한 기능
-- 메인 페이지, 공간 목록·상세, 인원 필터
-- 날짜·시간 선택 및 데모 예약
-- 브라우저에 저장한 예약 조회·취소
-- 로그인·회원가입 UI (실제 인증 미연결)
-- 반응형 레이아웃
+## 로컬 실행
+1. docs/database의 SQL 세 파일을 순서대로 실행합니다.
+2. 백엔드 실행 환경에 DB_USERNAME, DB_PASSWORD를 지정합니다.
+   기본 DB 주소는 localhost:3306/studyroom입니다. 다른 주소는 DB_URL로 지정합니다.
+3. backend에서 Java 21 이상으로 ./mvnw spring-boot:run을 실행합니다.
+4. frontend에서 npm ci 후 npm run dev를 실행합니다.
+5. Vite는 /api 요청을 localhost:8080으로 전달합니다.
 
-## 범위
-예약은 localStorage에만 저장됩니다. 실제 공간 예약·결제·인증은 수행하지 않습니다.
-다중 사용자 예약 충돌 및 권한 검증은 백엔드 개발 단계에서 구현할 예정입니다.
-공간 이미지는 AI로 생성한 가상 공간입니다. 생성 기록은 docs/assets/visual-assets.md를 확인하세요.
+## 배포
+[Render + Aiven 배포 가이드](docs/DEPLOYMENT.md)를 따릅니다.
+루트 Dockerfile은 프론트엔드를 빌드한 뒤 Spring Boot 정적 리소스로 포함합니다.
+실제 클라우드 배포와 DB 연결은 별도 설정이 필요합니다.
 
 ## 검증
-frontend에서 npm run build 및 npm run lint를 실행합니다.
+- frontend: npm run build, npm run lint
+- backend: ./mvnw test
+- H2 테스트 외에 실제 MySQL의 동시 예약 충돌 및 배포 환경 동작은 별도로 확인해야 합니다.
