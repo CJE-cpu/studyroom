@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class ReservationServiceTests {
     @Autowired ReservationService service;
+    @Autowired com.cje.studyroom.reservation.repository.ReservationRepository reservations;
     @Autowired MemberRepository members;
     @Autowired RoomRepository rooms;
 
@@ -76,5 +77,65 @@ class ReservationServiceTests {
             new ReservationCreateRequest(room.getId(), tomorrow().minusDays(2), 14, 2)));
         rejects(400, () -> service.create(member.getId(),
             new ReservationCreateRequest(room.getId(), tomorrow().plusDays(30), 14, 2)));
+    }
+
+    @Test void updatePreservesIdAndReleasesOldSlot() {
+        var owner = member();
+        var room = room();
+        var original = service.create(owner.getId(), new ReservationCreateRequest(room.getId(), tomorrow(), 14, 2));
+        var resized = service.update(owner.getId(), original.id(),
+            new ReservationCreateRequest(room.getId(), tomorrow(), 14, 3));
+        assertEquals(3, resized.people());
+        var moved = service.update(owner.getId(), original.id(),
+            new ReservationCreateRequest(room.getId(), tomorrow().plusDays(1), 15, 4));
+        assertEquals(original.id(), moved.id());
+        assertTrue(service.getAvailableHours(room.getId(), tomorrow()).contains(14));
+        assertFalse(service.getAvailableHours(room.getId(), tomorrow().plusDays(1)).contains(15));
+    }
+
+    @Test void updateRejectsConflictsAndInvalidInputWithoutChangingReservation() {
+        var owner = member();
+        var room = room();
+        var original = service.create(owner.getId(), new ReservationCreateRequest(room.getId(), tomorrow(), 14, 2));
+        service.create(owner.getId(), new ReservationCreateRequest(room.getId(), tomorrow(), 15, 2));
+        rejects(409, () -> service.update(owner.getId(), original.id(),
+            new ReservationCreateRequest(room.getId(), tomorrow(), 15, 2)));
+        rejects(400, () -> service.update(owner.getId(), original.id(),
+            new ReservationCreateRequest(room.getId(), tomorrow(), 14, 5)));
+        rejects(400, () -> service.update(owner.getId(), original.id(),
+            new ReservationCreateRequest(room.getId(), tomorrow().minusDays(2), 14, 2)));
+        var unchanged = service.getMyReservations(owner.getId()).stream()
+            .filter(r -> r.id().equals(original.id())).findFirst().orElseThrow();
+        assertEquals(14, unchanged.startHour());
+        assertEquals(2, unchanged.people());
+    }
+
+    @Test void onlyOwnerCanModifyAndOnlyCancelledReservationsCanBeDeleted() {
+        var owner = member();
+        var other = member();
+        var room = room();
+        var input = new ReservationCreateRequest(room.getId(), tomorrow(), 14, 2);
+        var original = service.create(owner.getId(), input);
+        rejects(404, () -> service.update(other.getId(), original.id(), input));
+        rejects(404, () -> service.delete(other.getId(), original.id()));
+        rejects(401, () -> service.update(null, original.id(), input));
+        rejects(401, () -> service.delete(null, original.id()));
+        rejects(400, () -> service.delete(owner.getId(), original.id()));
+        service.cancel(owner.getId(), original.id());
+        rejects(400, () -> service.update(owner.getId(), original.id(), input));
+        service.delete(owner.getId(), original.id());
+        assertTrue(service.getMyReservations(owner.getId()).isEmpty());
+        assertTrue(service.getAvailableHours(room.getId(), tomorrow()).contains(14));
+        rejects(404, () -> service.delete(owner.getId(), original.id()));
+    }
+
+    @Test void startedReservationCannotBeEditedOrDeleted() {
+        var owner = member();
+        var room = room();
+        var past = reservations.saveAndFlush(new com.cje.studyroom.reservation.entity.Reservation(
+            owner, room, tomorrow().minusDays(2), 14, 2));
+        rejects(400, () -> service.update(owner.getId(), past.getId(),
+            new ReservationCreateRequest(room.getId(), tomorrow(), 14, 2)));
+        rejects(400, () -> service.delete(owner.getId(), past.getId()));
     }
 }

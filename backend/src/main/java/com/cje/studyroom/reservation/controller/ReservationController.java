@@ -72,6 +72,22 @@ public class ReservationController {
             .body(reservationService.cancel(memberId, id));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<ReservationResponse> update(
+        @PathVariable("id") Long id,
+        @Valid @RequestBody ReservationCreateRequest body,
+        HttpServletRequest request
+    ) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(reservationService.update(requireMemberId(request), id, body));
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id, HttpServletRequest request) {
+        reservationService.delete(requireMemberId(request), id);
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+
     private Long requireMemberId(HttpServletRequest request) {
         var session = request.getSession(false);
 

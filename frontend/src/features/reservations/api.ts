@@ -28,6 +28,13 @@ export async function createReservation(input: ReservationInput) {
   const response = await axios.post('/api/reservations', input, { timeout: 15000 })
   return reservationSchema.parse(response.data)
 }
+export async function updateReservation(id: number, input: ReservationInput) {
+  const response = await axios.patch('/api/reservations/' + id, input, { timeout: 15000 })
+  return reservationSchema.parse(response.data)
+}
+export async function deleteReservation(id: number) {
+  await axios.delete('/api/reservations/' + id, { timeout: 15000 })
+}
 export async function cancelReservation(id: number) {
   const response = await axios.patch('/api/reservations/' + id + '/cancel', {}, { timeout: 15000 })
   return reservationSchema.parse(response.data)

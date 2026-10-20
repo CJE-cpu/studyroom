@@ -119,6 +119,56 @@ public class ReservationService {
         return ReservationResponse.from(saved);
     }
 
+    @Transactional
+    public ReservationResponse update(Long memberId, Long id, ReservationCreateRequest request) {
+        requireMember(memberId);
+        Reservation reservation = owned(memberId, id);
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED
+                || !reservation.getReservationDate().atTime(reservation.getStartHour(), 0)
+                    .isAfter(LocalDateTime.now(KOREA))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "시작 전의 유효한 예약만 수정할 수 있습니다.");
+        }
+        if (!reservation.getRoom().getId().equals(request.roomId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "공간 변경은 취소 후 새로 예약해주세요.");
+        }
+        LocalDateTime now = LocalDateTime.now(KOREA);
+        validateDate(request.reservationDate(), now.toLocalDate());
+        if (request.startHour() == null || request.startHour() < 9 || request.startHour() > 21
+                || !request.reservationDate().atTime(request.startHour(), 0).isAfter(now)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "예약 가능한 미래 시간을 선택해주세요.");
+        }
+        if (request.people() == null || request.people() < 1
+                || request.people() > reservation.getRoom().getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "공간 정원에 맞는 인원을 선택해주세요.");
+        }
+        boolean sameSlot = reservation.getReservationDate().equals(request.reservationDate())
+            && reservation.getStartHour() == request.startHour();
+        if (!sameSlot && reservationRepository.existsByRoom_IdAndReservationDateAndStartHourAndStatus(
+                request.roomId(), request.reservationDate(), request.startHour(), ReservationStatus.CONFIRMED)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 예약된 시간입니다.");
+        }
+        reservation.reschedule(request.reservationDate(), request.startHour(), request.people());
+        // The existing MySQL unique constraint also protects concurrent rescheduling.
+        reservationRepository.flush();
+        return ReservationResponse.from(reservation);
+    }
+
+    @Transactional
+    public void delete(Long memberId, Long id) {
+        requireMember(memberId);
+        Reservation reservation = owned(memberId, id);
+        if (reservation.getStatus() != ReservationStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "예약을 먼저 취소한 후 내역을 삭제해주세요.");
+        }
+        reservationRepository.delete(reservation);
+        reservationRepository.flush();
+    }
+
+    private Reservation owned(Long memberId, Long id) {
+        return reservationRepository.findByIdAndMember_Id(id, memberId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "예약을 찾을 수 없습니다."));
+    }
+
     // 본인 예약 목록
     public List<ReservationResponse> getMyReservations(Long memberId) {
         requireMember(memberId);

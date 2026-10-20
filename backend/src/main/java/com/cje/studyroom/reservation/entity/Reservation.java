@@ -104,6 +104,16 @@ public class Reservation {
         }
     }
 
+    public void reschedule(LocalDate date, int hour, int people) {
+        if (status != ReservationStatus.CONFIRMED || date == null || hour < 9 || hour > 21
+                || people < 1 || people > room.getCapacity()) {
+            throw new IllegalArgumentException("유효하지 않은 예약 변경입니다.");
+        }
+        this.reservationDate = date;
+        this.startHour = hour;
+        this.people = people;
+    }
+
     public void cancel() {
         if (status == ReservationStatus.CANCELLED) {
             throw new IllegalStateException(
